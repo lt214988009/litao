@@ -1,0 +1,28 @@
+  select
+            city_id,
+            sum( if(require_level='600' and b.product_id=3 and level='1',1,0) ) 1_star_cnt,
+            sum( if(require_level='600' and b.product_id=3 and level='2',1,0) ) 2_star_cnt,
+            sum( if(require_level='600' and b.product_id=3 and level='3',1,0) ) 3_star_cnt,
+            sum( if(require_level='600' and b.product_id=3 and level='4',1,0) ) 4_star_cnt,
+            sum( if(require_level='600' and b.product_id=3 and level='5',1,0) ) 5_star_cnt
+        from 
+        (
+            select 
+                order_id,
+                area city_id,
+                level,
+                type
+            from gulfstream_ods.g_comment_complaint
+            where concat(year,'-',month,'-',day) = '2016-06-12' 
+            and type in (1,2)
+        ) a
+        left outer join 
+        (
+            select 
+                order_id,
+                require_level,
+                product_id
+            from gulfstream_dw.dw_v_order_base
+            where concat(year,'-',month,'-',day) between '2016-05-12' and '2016-06-12'
+        ) b on (a.order_id=b.order_id)
+        group by city_id

@@ -1,0 +1,26 @@
+select b.city_name,
+        count(b.order_id),
+		sum(case when a.order_star_level=0 then 1 else 0 end),
+        sum(case when a.order_star_level=1 then 1 else 0 end),
+		sum(case when a.order_star_level=2 then 1 else 0 end),
+        sum(case when a.order_star_level=3 then 1 else 0 end),
+	    sum(case when a.order_star_level=4 then 1 else 0 end),
+	    sum(case when a.order_star_level=5 then 1 else 0 end),
+	   (sum(case when a.order_star_level=1 then 1 else 0 end)+sum(case when a.order_star_level=2 then 1 else 0 end))/(sum(case when a.order_star_level=1 then 1 else 0 end)+sum(case when a.order_star_level=2 then 1 else 0 end)+sum(case when a.order_star_level=3 then 1 else 0 end)+sum(case when a.order_star_level=4 then 1 else 0 end)+sum(case when a.order_star_level=5 then 1 else 0 end))
+       
+from
+(select  order_id,
+         city_name,
+		product_id 
+		from gulfstream_dw.dw_v_order_base
+		where product_id in (3,4)
+		     and order_status=5
+		     and finish_time between '2016-06-11 00:00:00' and '2016-06-11 23:59:59')b
+left outer join
+(select        order_id,
+             order_star_level 
+ from gulfstream_dw.dw_v_order_interactive_base
+     where concat_ws('-',year,month,day) between '2016-06-11' and '2016-06-12')a
+	 on b.order_id=a.order_id
+	  group by b.city_name
+	  
