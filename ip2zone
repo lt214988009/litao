@@ -1,0 +1,84 @@
+import pygeoip
+import pandas as pd
+gi = pygeoip.GeoIP("GeoLiteCity.dat")
+provinces = pd.read_csv("region_codes.csv")
+
+
+def regGeoStr(ip):
+    rec = gi.record_by_addr(ip)
+    if rec is not None:
+        # print(rec)
+        # city = rec['city']
+        country = rec['country_name']
+        if country == "Korea, Republic of":
+            country = "SouthKorea"
+        latitude = str(rec['latitude'])
+        longitude = str(rec['longitude'])
+        # timezone = str(rec['time_zone'])
+        # if rec['time_zone'] is not None:
+        #     timezone = rec['time_zone'].split('/')[0]
+        # else:
+        #     timezone = 'None'
+        region_code = str(int(rec["region_code"]))
+        province = provinces[(provinces["country_code"] == rec["country_code"])
+                             & ((provinces["region_code"]) == region_code)]["region"]
+        address = (latitude, longitude, str(province.iloc[0]), country)
+        # address = (latitude, longitude)
+        # print(address)
+        return address
+    else:
+        return ['None'] * 4
+
+
+def get_ip(ip_file):
+    """
+    Returns a list of IP addresses from a file containing one IP per line.
+    """
+    # ipfile = pd.read_csv(ip_file)
+    # ipfile_list = list(ipfile['ip'])
+    with open(ip_file, "r") as fp:
+        ipfile_list = fp.readlines()
+    return [ip.split('|')[0].strip() for ip in ipfile_list]
+
+
+def exchange(input_ipfile, output_zonefile):
+    FAILED = 0
+    iplist = get_ip(input_ipfile)
+    print(len(iplist))
+    with open(output_zonefile, 'wb+') as file:
+        # file.write(b"city,province,area,suffix\n")
+        # file.write(b"lat,long\n")
+        file.write(b"lat,long,province,country,suffix\n")
+        for ip in iplist:
+            try:
+                address = regGeoStr(ip)
+            except Exception as e:
+                # print(e)
+                FAILED += 1
+                address = ['None'] * 4
+
+            try:
+                iptext = ",".join(address)
+            except:
+                address = map(
+                    lambda x: 'None' if x is None else x, address)
+                iptext = ",".join(address)
+
+            file.write(iptext.encode())
+            file.write(b'\n')
+
+    print("getaddrinfo failed:", FAILED)
+
+
+if __name__ == '__main__':
+    import os
+    ips = os.listdir("newip")
+    # print(ips)
+    for ipcsv in ips:
+        exchange("newip/" + ipcsv, "newadd/" + ipcsv.split(".")[0] + "Address.csv")
+    # exchange("E:\\jtlinFile\\jtLin_Insomnia\\survey14_clean.csv",
+    #          "survey14_clean_zone.csv")
+    # exchange("E:\\jtlinFile\\jtLin_Depression\\survey71_clean.csv",
+    #          "survey71_clean_zone.csv")
+    # for PREFIX in ["survey14", "survey71"]:
+    #     exchange(PREFIX)
